@@ -2,11 +2,14 @@ cmake_minimum_required(VERSION 3.5.1)
 project(ImageService)
 set(CPP_STANDARD "11")
 
-find_package(aws-sdk-cpp)
+find_package(aws-sdk-cpp REQUIRED)
 add_definitions(-DUSE_IMPORT_EXPORT)
+
+find_package(OpenCV REQUIRED)
 
 include_directories(includes)
 file(GLOB SOURCES "sources/*.cpp")
 add_executable(run ${SOURCES})
 
 target_link_libraries(run aws-cpp-sdk-s3)
+target_link_libraries(run ${OpenCV_LIBS})
