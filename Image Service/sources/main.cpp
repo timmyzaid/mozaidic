@@ -4,10 +4,12 @@
 #include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
 #include <fstream>
+#include <vector>
+#include <sstream>
 
-int displayImage(const std::string& imageName) {
+int displayImage(cv::Mat buf) {
 	cv::Mat image;
-	image = cv::imread(imageName, CV_LOAD_IMAGE_COLOR);
+	image = cv::imdecode(buf, CV_LOAD_IMAGE_COLOR);
 
 	if (!image.data) {
 		std::cout << "Could not open or find the image" << std::endl;
@@ -38,11 +40,12 @@ int main() {
 	auto getObjectOutcome = s3Client.GetObject(objectRequest);
 
 	if (getObjectOutcome.IsSuccess()) {
-		Aws::OFStream localFile;
-		localFile.open("DesireeandZaid-23.jpg", std::ios::out | std::ios::binary);
-		localFile << getObjectOutcome.GetResult().GetBody().rdbuf();
-		std::cout << "Done!" << std::endl;
-		displayImage("DesireeandZaid-23.jpg");
+		std::stringstream ss;
+		ss << getObjectOutcome.GetResult().GetBody().rdbuf();
+		std::string str = ss.str();
+		std::vector<char> data(str.begin(), str.end());
+		displayImage(cv::Mat(data));
+		//displayImage((cv::InputArray)getObjectOutcome.GetResult().GetBody().rdbuf());
 	}
 	else {
 		std::cout << "GetObject error: " <<
