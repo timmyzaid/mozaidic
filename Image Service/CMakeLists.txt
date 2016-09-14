@@ -7,9 +7,12 @@ add_definitions(-DUSE_IMPORT_EXPORT)
 
 find_package(OpenCV REQUIRED)
 
-include_directories(includes)
+find_package(Boost 1.61.0 COMPONENTS system REQUIRED)
+
+include_directories(includes ${Boost_INCLUDE_DIRS})
 file(GLOB SOURCES "sources/*.cpp")
 add_executable(run ${SOURCES})
 
 target_link_libraries(run aws-cpp-sdk-s3)
 target_link_libraries(run ${OpenCV_LIBS})
+target_link_libraries(run ${Boost_LIBRARIES})

@@ -6,6 +6,10 @@
 #include <fstream>
 #include <vector>
 #include <sstream>
+#include <boost/asio.hpp>
+
+#include "server.h"
+#include "session.h"
 
 int displayImage(cv::Mat buf) {
 	cv::Mat image;
@@ -24,7 +28,7 @@ int displayImage(cv::Mat buf) {
 }
 
 
-int main() {
+int download() {
 	Aws::SDKOptions options;
 	Aws::InitAPI(options);
 
@@ -54,4 +58,18 @@ int main() {
 	}
 
 	Aws::ShutdownAPI(options);
+}
+
+int main() {
+	try {
+		boost::asio::io_service ioService;
+
+		Server s(ioService, 8081);
+		ioService.run();
+	}
+	catch (std::exception& e) {
+		std::cerr << "Exception: " << e.what() << std::endl;
+	}
+
+	return 0;
 }
