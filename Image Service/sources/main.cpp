@@ -1,75 +1,75 @@
+#include <string>
 #include <aws/core/Aws.h>
 #include <aws/s3/S3Client.h>
 #include <aws/s3/model/GetObjectRequest.h>
-#include <opencv2/core/core.hpp>
-#include <opencv2/highgui/highgui.hpp>
-#include <fstream>
-#include <vector>
-#include <sstream>
-#include <boost/asio.hpp>
+#include <aws/s3/model/HeadObjectRequest.h>
+#include <aws/transfer/TransferManager.h>
+#include <vips/vips8>
+#include "crow_all.h"
 
-#include "server.h"
-#include "session.h"
+using namespace vips;
 
-int displayImage(cv::Mat buf) {
-	cv::Mat image;
-	image = cv::imdecode(buf, CV_LOAD_IMAGE_COLOR);
+static const char* ALLOCATION_TAG = "ImageService";
 
-	if (!image.data) {
-		std::cout << "Could not open or find the image" << std::endl;
-		return -1;
-	}
-
-	cv::namedWindow("Display Window", cv::WINDOW_AUTOSIZE);
-	cv::imshow("Display Window", image);
-
-	cv::waitKey(0);
-	return 0;
-}
-
-
-int download() {
+crow::response download() {
 	Aws::SDKOptions options;
 	Aws::InitAPI(options);
+	crow::response res;
 
 	Aws::Client::ClientConfiguration config;
 	config.region = Aws::Region::US_WEST_2;
 	config.scheme = Aws::Http::Scheme::HTTPS;
 
-	Aws::S3::S3Client s3Client(config);
-	//Aws::S3::S3Client s3Client;
-	Aws::S3::Model::GetObjectRequest objectRequest;
-	objectRequest.WithBucket("mozaidic-test").WithKey("DesireeandZaid-23.jpg");
+	std::shared_ptr<Aws::S3::S3Client> s3Client = Aws::MakeShared<Aws::S3::S3Client>(ALLOCATION_TAG, config);
+	Aws::S3::Model::HeadObjectRequest headObjectRequest;
+	headObjectRequest.WithBucket("mozaidic-test").WithKey("DesireeandZaid-23.jpg");
 
-	auto getObjectOutcome = s3Client.GetObject(objectRequest);
+	auto headObjectOutcome = s3Client->HeadObject(headObjectRequest);
 
-	if (getObjectOutcome.IsSuccess()) {
-		std::stringstream ss;
-		ss << getObjectOutcome.GetResult().GetBody().rdbuf();
-		std::string str = ss.str();
-		std::vector<char> data(str.begin(), str.end());
-		displayImage(cv::Mat(data));
-		//displayImage((cv::InputArray)getObjectOutcome.GetResult().GetBody().rdbuf());
+	if (headObjectOutcome.IsSuccess()) {
+		Aws::Transfer::TransferManagerConfiguration transferManagerConfig;
+		transferManagerConfig.s3Client = s3Client;
+		transferManagerConfig.downloadProgressCallback = [](const Aws::Transfer::TransferManager *, const Aws::Transfer::TransferHandle& handle) {
+			std::cout << "Download Progress: " << handle.GetBytesTransferred() << " of " << handle.GetBytesTotalSize() << " bytes\n";
+		};
+		Aws::Transfer::TransferManager transferManager(transferManagerConfig);
+
+		size_t size = headObjectOutcome.GetResult().GetContentLength();
+		char * buffer = new char[size];
+		std::shared_ptr<Aws::Transfer::TransferHandle> downloadPtr = transferManager.DownloadFile("mozaidic-test", "DesireeandZaid-23.jpg", [buffer, size]() {
+			std::unique_ptr<Aws::StringStream> stream(Aws::New<Aws::StringStream>(ALLOCATION_TAG));
+			stream->rdbuf()->pubsetbuf(static_cast<char*>(buffer), size);
+			return stream.release();
+		});
+
+		downloadPtr->WaitUntilFinished();
+
+		VImage image = VImage::new_from_buffer(buffer, size, NULL);
+		VImage newImage = image.resize(.5);
+		size_t newSize = 0;
+		newImage.write_to_buffer(".jpg", (void**)&buffer, &newSize);
+		res.body.append(buffer, newSize);
+
+		Aws::ShutdownAPI(options);
+		delete [] buffer;
+		return res;
 	}
-	else {
-		std::cout << "GetObject error: " <<
-			getObjectOutcome.GetError().GetExceptionName() << " " <<
-			getObjectOutcome.GetError().GetMessage() << std::endl;
-	}
+
 
 	Aws::ShutdownAPI(options);
+	return crow::response("Not okay.");
 }
 
-int main() {
-	try {
-		boost::asio::io_service ioService;
+int main(int argc, char **argv) {
+	if (VIPS_INIT(argv[0]))
+		vips_error_exit(NULL);
 
-		Server s(ioService, 8081);
-		ioService.run();
-	}
-	catch (std::exception& e) {
-		std::cerr << "Exception: " << e.what() << std::endl;
-	}
+	crow::SimpleApp app;
+	CROW_ROUTE(app, "/")([]() {
+		return download();
+	});
+
+	app.port(8080).multithreaded().run();
 
 	return 0;
 }
