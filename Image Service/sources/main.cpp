@@ -67,9 +67,9 @@ crow::response download(Aws::String strName, int height, int width) {
 		return res;
 	}
 
-
 	Aws::ShutdownAPI(options);
 	res.code = 404;
+	res.body = headObjectOutcome.GetError().GetMessage().c_str();
 	return res;
 }
 
