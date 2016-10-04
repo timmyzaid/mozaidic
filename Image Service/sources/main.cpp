@@ -11,7 +11,7 @@ using namespace vips;
 
 static const char* ALLOCATION_TAG = "ImageService";
 
-crow::response download(Aws::String strName, int height, int width) {
+crow::response download(Aws::String strName, int height, int width, bool raw) {
 	Aws::SDKOptions options;
 	Aws::InitAPI(options);
 	crow::response res;
@@ -59,8 +59,15 @@ crow::response download(Aws::String strName, int height, int width) {
 			newImage = image.resize(hScale);
 
 		size_t newSize = 0;
-		newImage.write_to_buffer(".jpg", (void**)&buffer, &newSize);
-		res.body.append(buffer, newSize);
+		if (raw) {
+			void * newBuffer = newImage.write_to_memory(&newSize);
+			res.body.append((char*)newBuffer, newSize);
+			free(newBuffer);
+		}
+		else {
+			newImage.write_to_buffer(".jpg", (void**)&buffer, &newSize);
+			res.body.append(buffer, newSize);
+		}
 
 		Aws::ShutdownAPI(options);
 		delete [] buffer;
@@ -78,15 +85,18 @@ int main(int argc, char **argv) {
 		vips_error_exit(NULL);
 
 	crow::SimpleApp app;
-	CROW_ROUTE(app, "/<string>")([](const crow::request& req, std::string name) {
+	CROW_ROUTE(app, "/image/<string>")([](const crow::request& req, std::string name) {
 		int height = 0;
 		int width = 0;
+		bool raw = false;
 		if (req.url_params.get("height") != nullptr)
 			height = boost::lexical_cast<int>(req.url_params.get("height"));
 		if (req.url_params.get("width") != nullptr)
 			width = boost::lexical_cast<int>(req.url_params.get("width"));
+		if (req.url_params.get("raw") != nullptr && strcmp(req.url_params.get("raw"), "true") == 0)
+			raw = true;
 
-		return download(name.c_str(), height, width);
+		return download(name.c_str(), height, width, raw);
 	});
 
 	app.port(8080).multithreaded().run();
