@@ -1,20 +1,25 @@
 #include <string>
+#include <cstdlib>
+#include <vector>
+#include <dirent.h>
+#include <algorithm>
 #include <aws/core/Aws.h>
 #include <aws/s3/S3Client.h>
 #include <aws/s3/model/GetObjectRequest.h>
 #include <aws/s3/model/HeadObjectRequest.h>
 #include <aws/transfer/TransferManager.h>
+#include <aws/s3/model/ListObjectsRequest.h>
 #include <vips/vips8>
 #include "crow_all.h"
 
 using namespace vips;
 
 static const char* ALLOCATION_TAG = "ImageService";
+static const char* TEST_BUCKET = "mozaidic-test";
 
-crow::response download(Aws::String strName, int height, int width, bool raw) {
+bool getS3Image(Aws::String strName, VImage * image) {
 	Aws::SDKOptions options;
 	Aws::InitAPI(options);
-	crow::response res;
 
 	Aws::Client::ClientConfiguration config;
 	config.region = Aws::Region::US_WEST_2;
@@ -22,7 +27,7 @@ crow::response download(Aws::String strName, int height, int width, bool raw) {
 
 	std::shared_ptr<Aws::S3::S3Client> s3Client = Aws::MakeShared<Aws::S3::S3Client>(ALLOCATION_TAG, config);
 	Aws::S3::Model::HeadObjectRequest headObjectRequest;
-	headObjectRequest.WithBucket("mozaidic-test").WithKey(strName);
+	headObjectRequest.WithBucket(TEST_BUCKET).WithKey(strName);
 
 	auto headObjectOutcome = s3Client->HeadObject(headObjectRequest);
 
@@ -36,15 +41,39 @@ crow::response download(Aws::String strName, int height, int width, bool raw) {
 
 		size_t size = headObjectOutcome.GetResult().GetContentLength();
 		char * buffer = new char[size];
-		std::shared_ptr<Aws::Transfer::TransferHandle> downloadPtr = transferManager.DownloadFile("mozaidic-test", strName, [buffer, size]() {
+		std::shared_ptr<Aws::Transfer::TransferHandle> downloadPtr = transferManager.DownloadFile(TEST_BUCKET, strName, [buffer, size]() {
 			std::unique_ptr<Aws::StringStream> stream(Aws::New<Aws::StringStream>(ALLOCATION_TAG));
 			stream->rdbuf()->pubsetbuf(static_cast<char*>(buffer), size);
 			return stream.release();
 		});
 
 		downloadPtr->WaitUntilFinished();
+		Aws::ShutdownAPI(options);
+		*image = VImage::new_from_buffer(buffer, size, NULL);
+		//delete [] buffer;
+		return true;
+	}
 
-		VImage image = VImage::new_from_buffer(buffer, size, NULL);
+	Aws::ShutdownAPI(options);
+	return false;
+}
+
+bool getLocalImage(Aws::String strName, VImage * image) {
+	Aws::String newName = "images/" + strName;
+	*image = VImage::new_from_file(newName.c_str());
+	return true;
+}
+
+crow::response download(Aws::String strName, int height, int width) {
+	crow::response res;
+	VImage image;
+	bool success = false;
+	if (std::getenv("USE_LOCAL") && strcmp(std::getenv("USE_LOCAL"), "true") == 0)
+		success = getLocalImage(strName, &image);
+	else
+		success = getS3Image(strName, &image);
+
+	if (success) {
 		double hScale = 1;
 		if (width)
 			hScale = (double)width / image.width();
@@ -58,26 +87,95 @@ crow::response download(Aws::String strName, int height, int width, bool raw) {
 		else
 			newImage = image.resize(hScale);
 
-		size_t newSize = 0;
-		if (raw) {
-			void * newBuffer = newImage.write_to_memory(&newSize);
-			res.body.append((char*)newBuffer, newSize);
-			free(newBuffer);
-		}
-		else {
-			newImage.write_to_buffer(".jpg", (void**)&buffer, &newSize);
-			res.body.append(buffer, newSize);
-		}
+		void * buffer;
+		size_t newSize;
+		newImage.write_to_buffer(".jpg", &buffer, &newSize);
+		res.body.append((char*)buffer, newSize);
 
-		Aws::ShutdownAPI(options);
-		delete [] buffer;
+		free(buffer);
 		return res;
 	}
 
-	Aws::ShutdownAPI(options);
 	res.code = 404;
-	res.body = headObjectOutcome.GetError().GetMessage().c_str();
+	//res.body = headObjectOutcome.GetError().GetMessage().c_str();
 	return res;
+}
+
+bool isImage(std::string file) {
+	std::transform(file.begin(), file.end(), file.begin(), ::tolower);
+	if (file.length() >= 3) {
+		//jpg, png
+		return file.compare(file.length() - 3, 3, "jpg") == 0 || file.compare(file.length() - 3, 3, "png") == 0;
+	}
+
+	return false;
+}
+
+std::vector<std::string> getLocalImageList() {
+	std::vector<std::string> imageList;
+	DIR *dir;
+	struct dirent *ent;
+	if ((dir = opendir("images/")) != NULL) {
+		while ((ent = readdir(dir)) != NULL) {
+			if (isImage(ent->d_name))
+				imageList.push_back(ent->d_name);
+		}
+
+		closedir(dir);
+	}
+
+	return imageList;
+}
+
+std::vector<std::string> getS3ImageList() {
+	std::vector<std::string> imageList;
+	Aws::SDKOptions options;
+	Aws::InitAPI(options);
+
+	Aws::Client::ClientConfiguration config;
+	config.region = Aws::Region::US_WEST_2;
+	config.scheme = Aws::Http::Scheme::HTTPS;
+	Aws::S3::S3Client s3Client(config);
+	Aws::S3::Model::ListObjectsRequest objectsRequest;
+
+	objectsRequest.WithBucket(TEST_BUCKET);
+	auto outcome = s3Client.ListObjects(objectsRequest);
+	if (outcome.IsSuccess()) {
+		Aws::Vector<Aws::S3::Model::Object> list = outcome.GetResult().GetContents();
+		for (auto const& object : list) {
+			if (isImage(object.GetKey().c_str()))
+				imageList.push_back(object.GetKey().c_str());
+		}
+	}
+
+	Aws::ShutdownAPI(options);
+	return imageList;
+}
+
+crow::response getImageList(const crow::request& req) {
+	std::vector<std::string> imageList;
+	if (std::getenv("USE_LOCAL") && strcmp(std::getenv("USE_LOCAL"), "true") == 0)
+		imageList = getLocalImageList();
+	else
+		imageList = getS3ImageList();
+
+	if (!imageList.empty()) {
+		std::string json = "{\"images\":[";
+		bool addComma = false;
+		for (auto image : imageList) {
+			if (addComma)
+				json += ",";
+			else
+				addComma = true;
+
+			json += "\"" + image + "\"";
+		}
+		json += "]}";
+
+		return crow::response(json);
+	}
+
+	return crow::response(404);
 }
 
 int main(int argc, char **argv) {
@@ -88,18 +186,20 @@ int main(int argc, char **argv) {
 	CROW_ROUTE(app, "/image/<string>")([](const crow::request& req, std::string name) {
 		int height = 0;
 		int width = 0;
-		bool raw = false;
 		if (req.url_params.get("height") != nullptr)
 			height = boost::lexical_cast<int>(req.url_params.get("height"));
 		if (req.url_params.get("width") != nullptr)
 			width = boost::lexical_cast<int>(req.url_params.get("width"));
-		if (req.url_params.get("raw") != nullptr && strcmp(req.url_params.get("raw"), "true") == 0)
-			raw = true;
 
-		return download(name.c_str(), height, width, raw);
+		return download(name.c_str(), height, width);
+	});
+
+	CROW_ROUTE(app, "/image_list")([](const crow::request& req) {
+		return getImageList(req);
 	});
 
 	app.port(8080).multithreaded().run();
+	vips_shutdown();
 
 	return 0;
 }

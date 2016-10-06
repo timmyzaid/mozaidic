@@ -6,8 +6,9 @@ RUN apt-get update && apt-get install -y \
         libpango1.0-0 \
         libexif12 \
         libcurl3 \
-        gdb \
-    && rm -rf /var/lib/apt/lists/*
+     && rm -rf /var/lib/apt/lists/*
+
+#COPY build/aws/credentials /root/.aws/credentials
 
 COPY build/libaws-cpp-sdk-transfer.so /usr/local/lib/
 COPY build/libaws-cpp-sdk-s3.so /usr/local/lib/
