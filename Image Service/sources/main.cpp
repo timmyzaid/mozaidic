@@ -17,7 +17,17 @@ using namespace vips;
 static const char* ALLOCATION_TAG = "ImageService";
 static const char* TEST_BUCKET = "mozaidic-test";
 
-bool getS3Image(Aws::String strName, VImage * image) {
+bool isImage(std::string file) {
+	std::transform(file.begin(), file.end(), file.begin(), ::tolower);
+	if (file.length() >= 3) {
+		//jpg, png
+		return file.compare(file.length() - 3, 3, "jpg") == 0 || file.compare(file.length() - 3, 3, "png") == 0;
+	}
+
+	return false;
+}
+
+bool getS3Image(Aws::String strName, VImage * image, bool mosaicImage) {
 	Aws::SDKOptions options;
 	Aws::InitAPI(options);
 
@@ -58,20 +68,25 @@ bool getS3Image(Aws::String strName, VImage * image) {
 	return false;
 }
 
-bool getLocalImage(Aws::String strName, VImage * image) {
-	Aws::String newName = "images/" + strName;
+bool getLocalImage(Aws::String strName, VImage * image, bool mosaicImage) {
+	Aws::String newName = "images/";
+	newName += mosaicImage ? "mosaic_images/" : "tile_images/";
+	newName += strName;
 	*image = VImage::new_from_file(newName.c_str());
 	return true;
 }
 
-crow::response download(Aws::String strName, int height, int width) {
+crow::response download(Aws::String strName, int height, int width, bool mosaicImage) {
+	if (!isImage(strName.c_str()))
+		return crow::response(404);
+
 	crow::response res;
 	VImage image;
 	bool success = false;
 	if (std::getenv("USE_LOCAL") && strcmp(std::getenv("USE_LOCAL"), "true") == 0)
-		success = getLocalImage(strName, &image);
+		success = getLocalImage(strName, &image, mosaicImage);
 	else
-		success = getS3Image(strName, &image);
+		success = getS3Image(strName, &image, mosaicImage);
 
 	if (success) {
 		double hScale = 1;
@@ -101,21 +116,11 @@ crow::response download(Aws::String strName, int height, int width) {
 	return res;
 }
 
-bool isImage(std::string file) {
-	std::transform(file.begin(), file.end(), file.begin(), ::tolower);
-	if (file.length() >= 3) {
-		//jpg, png
-		return file.compare(file.length() - 3, 3, "jpg") == 0 || file.compare(file.length() - 3, 3, "png") == 0;
-	}
-
-	return false;
-}
-
 std::vector<std::string> getLocalImageList() {
 	std::vector<std::string> imageList;
 	DIR *dir;
 	struct dirent *ent;
-	if ((dir = opendir("images/")) != NULL) {
+	if ((dir = opendir("images/tile_images/")) != NULL) {
 		while ((ent = readdir(dir)) != NULL) {
 			if (isImage(ent->d_name))
 				imageList.push_back(ent->d_name);
@@ -183,7 +188,7 @@ int main(int argc, char **argv) {
 		vips_error_exit(NULL);
 
 	crow::SimpleApp app;
-	CROW_ROUTE(app, "/image/<string>")([](const crow::request& req, std::string name) {
+	CROW_ROUTE(app, "/tile_image/<string>")([](const crow::request& req, std::string name) {
 		int height = 0;
 		int width = 0;
 		if (req.url_params.get("height") != nullptr)
@@ -191,7 +196,18 @@ int main(int argc, char **argv) {
 		if (req.url_params.get("width") != nullptr)
 			width = boost::lexical_cast<int>(req.url_params.get("width"));
 
-		return download(name.c_str(), height, width);
+		return download(name.c_str(), height, width, false);
+	});
+
+	CROW_ROUTE(app, "/mosaic_image/<string>")([](const crow::request& req, std::string name) {
+		int height = 0;
+		int width = 0;
+		if (req.url_params.get("height") != nullptr)
+			height = boost::lexical_cast<int>(req.url_params.get("height"));
+		if (req.url_params.get("width") != nullptr)
+			width = boost::lexical_cast<int>(req.url_params.get("width"));
+
+		return download(name.c_str(), height, width, true);
 	});
 
 	CROW_ROUTE(app, "/image_list")([](const crow::request& req) {

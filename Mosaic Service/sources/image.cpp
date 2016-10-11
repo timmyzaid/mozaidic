@@ -70,8 +70,6 @@ cv::Mat Image::createMosaicFromImages(std::vector<Image> tileImages) {
 		split[2] -= match->getAverage()[2] - region.m_average[2];
 		match->use();
 		cv::merge(split, mosaic(cv::Range(row, rowStop), cv::Range(col, colStop)));
-		//matchMat(cv::Range(0, rowStop - row), cv::Range(0, colStop - col)).copyTo(mosaic(cv::Range(row, rowStop), cv::Range(col, colStop)));
-		//mosaic(cv::Range(row, rowStop), cv::Range(col, colStop)) = match->getMat();
 	}
 	return mosaic;
 }
