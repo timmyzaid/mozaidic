@@ -19,11 +19,13 @@ RUN tar -zxvf vips-8.4.1.tar.gz \
 
 RUN tar -zxvf boost_1_61_0.tar.gz \
     && cd boost_1_61_0 \
+    && chmod +x bootstrap.sh \
     && ./bootstrap.sh \
-    && ./b2 install -j8
+    && chmod +x b2 \
+    && ./b2 install -j8; exit 0
 
 RUN rm -rf boost_1_61_0 vips-8.4.1 \
     && rm boost_1_61_0.tar.gz \
-    && rm vips-8.4.1..tar.gz
+    && rm vips-8.4.1.tar.gz
 
 ENTRYPOINT /bin/bash
