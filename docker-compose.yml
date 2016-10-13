@@ -1,0 +1,33 @@
+version: '2'
+services:
+    image_service:
+        image: image_service:latest
+        volumes_from:
+            - upload_service:ro
+        expose:
+            - "5000"
+    upload_service:
+        image: upload_service:latest
+        volumes:
+            - "/images"
+        expose:
+            - "5001"
+        command: /usr/local/bin/gunicorn -w 2 -b :5001 upload:app
+    #mosaic_service:
+    #    image: mosaic_service:latest
+    #    volumes_from:
+    #        - upload_service:ro
+    #    expose:
+    #        - "5002"
+    nginx:
+        image: mozaidic_nginx:latest
+        ports:
+            - "80:80"
+        links:
+            - image_service:image_service
+            - upload_service:upload_service
+    #        - mosaic_service:mosaic_service
+        volumes:
+            - /static
+        volumes_from:
+            - upload_service:ro

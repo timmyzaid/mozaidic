@@ -71,7 +71,7 @@ int main(int argc, char **argv) {
 		return getImage(name, height, width);
 	});
 
-	app.port(8080).multithreaded().run();
+	app.port(5000).multithreaded().run();
 	vips_shutdown();
 
 	return 0;

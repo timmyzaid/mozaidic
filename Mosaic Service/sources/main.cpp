@@ -65,7 +65,7 @@ int main(int argc, char **argv) {
 		return generateMosaic(name);
 	});
 
-	app.port(8081).multithreaded().run();
+	app.port(5002).multithreaded().run();
 
 	return 0;
 }
