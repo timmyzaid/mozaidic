@@ -19,20 +19,14 @@ bool isImage(std::string file) {
 	return false;
 }
 
-VImage loadImage(const std::string &strName, bool mosaicImage) {
-	std::string newName = "images/";
-	newName += mosaicImage ? "mosaic_images/" : "tile_images/";
-	newName += strName;
-	return VImage::new_from_file(newName.c_str());
-}
-
-crow::response getImage(std::string strName, int height, int width, bool mosaicImage) {
+crow::response getImage(std::string strName, int height, int width) {
 	if (!isImage(strName.c_str()))
 		return crow::response(404);
 
 	crow::response res;
 	try {
-		VImage image = loadImage(strName, mosaicImage);
+		strName.insert(0, "images/");
+		VImage image = VImage::new_from_file(strName.c_str());
 		double hScale = 1;
 		if (width)
 			hScale = (double)width / image.width();
@@ -55,48 +49,10 @@ crow::response getImage(std::string strName, int height, int width, bool mosaicI
 	}
 	catch(const std::exception& e) {
 		res.code = 404;
-		//res.body = headObjectOutcome.GetError().GetMessage().c_str();
+		res.body = e.what();
 	}
 
 	return res;
-}
-
-std::vector<std::string> getImageNamesVector() {
-	std::vector<std::string> imageList;
-	DIR *dir;
-	struct dirent *ent;
-	if ((dir = opendir("images/tile_images/")) != NULL) {
-		while ((ent = readdir(dir)) != NULL) {
-			if (isImage(ent->d_name))
-				imageList.push_back(ent->d_name);
-		}
-
-		closedir(dir);
-	}
-
-	return imageList;
-}
-
-crow::response getImageList(const crow::request& req) {
-	std::vector<std::string> imageList = getImageNamesVector();
-
-	if (!imageList.empty()) {
-		std::string json = "{\"images\":[";
-		bool addComma = false;
-		for (auto image : imageList) {
-			if (addComma)
-				json += ",";
-			else
-				addComma = true;
-
-			json += "\"" + image + "\"";
-		}
-		json += "]}";
-
-		return crow::response(json);
-	}
-
-	return crow::response(404);
 }
 
 int main(int argc, char **argv) {
@@ -104,7 +60,7 @@ int main(int argc, char **argv) {
 		vips_error_exit(NULL);
 
 	crow::SimpleApp app;
-	CROW_ROUTE(app, "/tile_image/<string>")([](const crow::request& req, std::string name) {
+	CROW_ROUTE(app, "/image/<string>").methods("GET"_method) ([](const crow::request& req, std::string name) {
 		int height = 0;
 		int width = 0;
 		if (req.url_params.get("height") != nullptr)
@@ -112,22 +68,7 @@ int main(int argc, char **argv) {
 		if (req.url_params.get("width") != nullptr)
 			width = boost::lexical_cast<int>(req.url_params.get("width"));
 
-		return getImage(name.c_str(), height, width, false);
-	});
-
-	CROW_ROUTE(app, "/mosaic_image/<string>")([](const crow::request& req, std::string name) {
-		int height = 0;
-		int width = 0;
-		if (req.url_params.get("height") != nullptr)
-			height = boost::lexical_cast<int>(req.url_params.get("height"));
-		if (req.url_params.get("width") != nullptr)
-			width = boost::lexical_cast<int>(req.url_params.get("width"));
-
-		return getImage(name.c_str(), height, width, true);
-	});
-
-	CROW_ROUTE(app, "/image_list")([](const crow::request& req) {
-		return getImageList(req);
+		return getImage(name, height, width);
 	});
 
 	app.port(8080).multithreaded().run();
