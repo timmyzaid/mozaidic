@@ -7,9 +7,9 @@ RUN apt-get update && apt-get install -y \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
-COPY libraries/libvips-cpp.so.42.6.1 /usr/local/lib/libvips-cpp.so.42
-COPY libraries/libvips.so.42.6.1 /usr/local/lib/libvips.so.42
-COPY libraries/libboost_system.so.1.61.0 /usr/local/lib/
+COPY build/libraries/libvips-cpp.so.42.6.1 /usr/local/lib/libvips-cpp.so.42
+COPY build/libraries/libvips.so.42.6.1 /usr/local/lib/libvips.so.42
+COPY build/libraries/libboost_system.so.1.61.0 /usr/local/lib/
 
-COPY image_service /
+COPY build/image_service /
 ENTRYPOINT ./image_service
