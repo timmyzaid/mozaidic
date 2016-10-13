@@ -28,4 +28,6 @@ RUN rm -rf boost_1_61_0 vips-8.4.1 \
     && rm boost_1_61_0.tar.gz \
     && rm vips-8.4.1.tar.gz
 
+COPY build.sh /
+RUN chmod +x /build.sh
 ENTRYPOINT /bin/bash
