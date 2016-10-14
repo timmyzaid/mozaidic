@@ -12,7 +12,7 @@ services:
             - ./images:/images
         expose:
             - "5001"
-        command: /usr/local/bin/gunicorn -w 1 -b :5001 upload:app
+        command: /usr/local/bin/gunicorn --reload -w 1 -b :5001 upload:app
     #mosaic_service:
     #    image: mosaic_service:latest
     #    volumes_from:
@@ -28,6 +28,6 @@ services:
             - upload_service:upload_service
     #        - mosaic_service:mosaic_service
         volumes:
-            - /static
+            - ./Frontend/build:/html
         volumes_from:
             - upload_service:ro
