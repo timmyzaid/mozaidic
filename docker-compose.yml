@@ -9,10 +9,10 @@ services:
     upload_service:
         image: upload_service:latest
         volumes:
-            - "/images"
+            - ./images:/images
         expose:
             - "5001"
-        command: /usr/local/bin/gunicorn -w 2 -b :5001 upload:app
+        command: /usr/local/bin/gunicorn -w 1 -b :5001 upload:app
     #mosaic_service:
     #    image: mosaic_service:latest
     #    volumes_from:

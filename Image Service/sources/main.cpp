@@ -33,9 +33,8 @@ crow::response getImage(std::string strName, int height, int width) {
 
 		VImage newImage;
 		if (height) {
-			double vScale = 1;
-			vScale = (double)height / image.height();
-			newImage = image.resize(hScale, VImage::option()->set("vscale", vScale));
+			double vScale = (double)height / image.height();
+			newImage = image.resize(hScale == 1 ? vScale : hScale, VImage::option()->set("vscale", vScale));
 		}
 		else
 			newImage = image.resize(hScale);
