@@ -1,0 +1,21 @@
+version: '2'
+services:
+    nginx:
+        build:
+            context: .
+            dockerfile: Dockerfile.nginx
+        image: nginx
+        ports:
+            - "8080:8080"
+        volumes:
+            - ./static:/static
+    webpack:
+        build:
+            context: .
+            dockerfile: Dockerfile.web
+        image: webpack
+        ports:
+            - "35729:35729"
+        volumes:
+            - ./src:/src
+            - ./static:/static

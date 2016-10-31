@@ -1,8 +1,20 @@
+var webpack = require('webpack');
+var HtmlWebpackPlugin = require('html-webpack-plugin');
+
 module.exports = {
     entry: "./src/index.tsx",
     output: {
-        filename: "./static/app.js",
+        path: __dirname + 'static',
+        filename: 'js/app.js'
     },
+
+    plugins: [
+        new webpack.HotModuleReplacementPlugin(),
+        new HtmlWebpackPlugin({
+            template: 'src/index.template.ejs',
+            inject: 'body',
+        })
+    ],
 
     // Enable sourcemaps for debugging webpack's output.
     devtool: "source-map",

@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "webpack-dev-server --progress --inline"
+    "start": "webpack --watch --watch-polling"
   },
   "author": "Zaid Mullins",
   "license": "ISC",
@@ -13,7 +13,8 @@
     "@types/react": "^0.14.43",
     "@types/react-dom": "^0.14.18",
     "react": "^15.3.2",
-    "react-dom": "^15.3.2"
+    "react-dom": "^15.3.2",
+    "html-webpack-plugin": "^2.24.1"
   },
   "devDependencies": {
     "source-map-loader": "^0.1.5",

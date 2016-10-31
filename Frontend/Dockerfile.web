@@ -1,0 +1,9 @@
+FROM node:6.9.1
+
+COPY package.json /
+RUN npm install -g typescript webpack
+RUN npm install
+RUN npm link typescript
+
+COPY tsconfig.json webpack.config.js /
+ENTRYPOINT ["npm", "start"]
