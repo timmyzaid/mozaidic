@@ -1,4 +1,5 @@
-var HtmlWebpackPlugin = require('html-webpack-plugin');
+const HtmlWebpackPlugin = require('html-webpack-plugin');
+const ExtractTextPlugin = require('extract-text-webpack-plugin');
 
 module.exports = {
     entry: "./src/index.tsx",
@@ -11,6 +12,9 @@ module.exports = {
         new HtmlWebpackPlugin({
             template: 'src/index.template.ejs',
             inject: 'body',
+        }),
+        new ExtractTextPlugin('style.css', {
+            allChunks: true
         })
     ],
 
@@ -29,7 +33,8 @@ module.exports = {
     module: {
         loaders: [
             // All files with a '.ts' or '.tsx' extension will be handled by 'ts-loader'.
-            { test: /\.tsx?$/, loader: "ts-loader" }
+            { test: /\.tsx?$/, loader: "ts-loader" },
+            { test: /\.css$/, loader: ExtractTextPlugin.extract("style-loader", "css-loader")}
         ],
 
         preLoaders: [

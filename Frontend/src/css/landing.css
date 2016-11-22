@@ -1,0 +1,36 @@
+.landing-container {
+    margin: 0 auto;
+    padding: 200px 0;
+    text-align: center;
+    height: 100%;
+    font-family: 'Open Sans', sans-serif;
+    color: #393939;
+}
+
+.landing-heading {
+    font-size: 48pt;
+    font-weight: bold;
+}
+
+.landing-sub {
+    font-size: 18pt;
+    margin-top: 50px;
+}
+
+.landing-button {
+    background: linear-gradient(darkgray, gray);
+}
+
+input[type="file"] {
+    display: none;
+}
+
+.landing-upload {
+    cursor: pointer;
+    width: 150px;
+    height: 100px;
+}
+
+.italics {
+    font-style: italic;
+}

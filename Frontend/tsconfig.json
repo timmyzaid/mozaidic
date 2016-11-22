@@ -1,6 +1,5 @@
 {
 	"compilerOptions": {
-		"outDir": "./public",
 		"sourceMap": true,
 		"noImplicitAny": true,
 		"strictNullChecks": true,
@@ -9,7 +8,8 @@
 		"jsx": "react"
 	},
 	"files": [
-		"./src/components/Hello.tsx",
+		"./src/globals.d.ts",
+		"./src/components/Landing.tsx",
 		"./src/index.tsx"
 	]
 }

@@ -1,9 +1,10 @@
 import * as React from "react";
 import * as ReactDom from "react-dom";
+import { Landing } from "./components/Landing";
+require("./css/index.css");
 
-import { Hello } from "./components/Hello";
 
 ReactDom.render(
-    <Hello compiler="TypeScript" framework="React" />,
-    document.getElementById("example")
+    <Landing />,
+    document.getElementById("base")
 );
