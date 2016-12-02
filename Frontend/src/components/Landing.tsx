@@ -8,7 +8,7 @@ export function Landing() {
         <div className="landing-container">
             <div className="landing-heading">Easily. <span className="italics">Create.</span> Mosaics.</div>
             <div className="landing-sub">Click the button or drag some images to begin.</div>
-            <UploadButton buttonText="Upload Images" containerClass="upload-button" labelClass="upload-label"/>
+            <UploadButton buttonText="Upload Images" containerClass="upload-container" labelClass="upload-label" inputClass="upload-button"/>
         </div>
     );
 }

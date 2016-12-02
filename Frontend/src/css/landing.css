@@ -21,10 +21,21 @@ input[type="file"] {
     display: none;
 }
 
-.upload-button {
+.upload-container {
+    margin: 0 auto;
+}
+
+.upload-label {
     cursor: pointer;
     width: 150px;
     height: 100px;
+    line-height: 100px;
+    display: inline-block;
+    box-shadow: 1px 1px 1px black;
+}
+
+.upload-button {
+
 }
 
 .italics {

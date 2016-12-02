@@ -7,5 +7,6 @@ declare var require: {
 declare interface UploadButtonProps {
     containerClass: string,
     labelClass: string,
-    buttonText: string
+    buttonText: string,
+    inputClass: string
 }
