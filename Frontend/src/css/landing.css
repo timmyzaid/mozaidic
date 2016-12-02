@@ -17,15 +17,11 @@
     margin-top: 50px;
 }
 
-.landing-button {
-    background: linear-gradient(darkgray, gray);
-}
-
 input[type="file"] {
     display: none;
 }
 
-.landing-upload {
+.upload-button {
     cursor: pointer;
     width: 150px;
     height: 100px;

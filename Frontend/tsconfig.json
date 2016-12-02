@@ -6,10 +6,5 @@
 		"module": "commonjs",
 		"target": "es5",
 		"jsx": "react"
-	},
-	"files": [
-		"./src/globals.d.ts",
-		"./src/components/Landing.tsx",
-		"./src/index.tsx"
-	]
+	}
 }
