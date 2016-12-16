@@ -1,10 +1,12 @@
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 const ExtractTextPlugin = require('extract-text-webpack-plugin');
+const path = require('path');
+
 
 module.exports = {
     entry: "./src/index.tsx",
     output: {
-        path: __dirname + 'static',
+        path: path.resolve(__dirname, './static'),
         filename: 'js/app.js'
     },
 

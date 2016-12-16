@@ -1,9 +1,11 @@
 FROM node:6.9.1
 
-COPY package.json /
+WORKDIR frontend
+
+COPY package.json /frontend/
 RUN npm install -g typescript webpack
 RUN npm install
 RUN npm link typescript
 
-COPY tsconfig.json webpack.config.js /
+COPY tsconfig.json webpack.config.js /frontend/
 ENTRYPOINT ["npm", "start"]

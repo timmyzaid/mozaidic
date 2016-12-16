@@ -28,6 +28,6 @@ services:
             - upload_service:upload_service
     #        - mosaic_service:mosaic_service
         volumes:
-            - ./Frontend/build:/html
+            - ./Frontend/static:/html
         volumes_from:
             - upload_service:ro
